@@ -13,7 +13,8 @@ class UserOffsetScrollPhysics extends ScrollPhysics
 
   @override
   UserOffsetScrollPhysics applyTo(ScrollPhysics? ancestor) {
-    return UserOffsetScrollPhysics(parent: buildParent(ancestor));
+    return UserOffsetScrollPhysics(
+        parent: buildParent(ancestor), offsetMafnifier: offsetMafnifier);
   }
 
   @override
@@ -21,6 +22,7 @@ class UserOffsetScrollPhysics extends ScrollPhysics
     print(
       'DEVvvv: applyPhysicsToUserOffset minExtent: ${position.minScrollExtent}, maxExtent: ${position.maxScrollExtent}, offset: $offset, pix: ${position.pixels})',
     );
+    print("Current param: $offsetMafnifier");
     if (!position.outOfRange) {
       return offsetMafnifier * offset;
     }
@@ -43,7 +45,8 @@ class BoundaryConditionScrollPhysics extends ScrollPhysics
 
   @override
   BoundaryConditionScrollPhysics applyTo(ScrollPhysics? ancestor) {
-    return BoundaryConditionScrollPhysics(parent: buildParent(ancestor));
+    return BoundaryConditionScrollPhysics(
+        parent: buildParent(ancestor), valueMagnifier: valueMagnifier);
   }
 
   @override
@@ -52,8 +55,29 @@ class BoundaryConditionScrollPhysics extends ScrollPhysics
       'DEVvvv: boundary: value: $value, px: ${position.pixels})',
     );
 
-    if (position.atEdge) {
-      return valueMagnifier * value;
+    print("Current param: $valueMagnifier");
+
+    if (value < position.pixels &&
+        position.pixels <= position.minScrollExtent) {
+      print('underscroll');
+      // Underscroll.
+      return valueMagnifier * (value - position.pixels);
+    }
+    if (position.maxScrollExtent <= position.pixels &&
+        position.pixels < value) {
+      print('overscroll');
+      // Overscroll.
+      return valueMagnifier * (value - position.pixels);
+    }
+    if (value < position.minScrollExtent &&
+        position.minScrollExtent < position.pixels) {
+      print('// Hit top edge');
+      return valueMagnifier * (value - position.minScrollExtent);
+    }
+    if (position.pixels < position.maxScrollExtent &&
+        position.maxScrollExtent < value) {
+      print('// Hit bottom edge.');
+      return valueMagnifier * (value - position.maxScrollExtent);
     }
 
     return 0;
@@ -72,15 +96,20 @@ class BallisticScrollPhysics extends ScrollPhysics {
   final double damping, mass, stiffness, drag;
   const BallisticScrollPhysics({
     this.damping = 1,
-    this.mass = 1,
+    this.mass = 100,
     this.stiffness = 1,
-    this.drag = 1,
+    this.drag = 0.2,
     super.parent,
   });
 
   @override
   BallisticScrollPhysics applyTo(ScrollPhysics? ancestor) {
-    return BallisticScrollPhysics(parent: buildParent(ancestor));
+    return BallisticScrollPhysics(
+        parent: buildParent(ancestor),
+        damping: damping,
+        mass: mass,
+        stiffness: stiffness,
+        drag: drag);
   }
 
   @override
@@ -92,17 +121,21 @@ class BallisticScrollPhysics extends ScrollPhysics {
       "devvv simulation: direction: ${position.axisDirection}, vel: ${velocity}, out: ${position.outOfRange} ",
     );
 
+    print(
+        'devvv params: drag: $drag, stf: $stiffness, mass: $mass, damp: $damping');
+
     if (position.outOfRange) {
       return ScrollSpringSimulation(
-        const SpringDescription(damping: 0.5, mass: 100, stiffness: 1),
+        SpringDescription.withDampingRatio(
+            ratio: damping, mass: mass, stiffness: stiffness),
         position.pixels,
         position.pixels >= position.maxScrollExtent
-            ? position.pixels - 100
-            : position.pixels + 100,
+            ? position.maxScrollExtent
+            : position.minScrollExtent,
         velocity,
       );
     }
-    return FrictionSimulation(0.2, position.pixels, velocity);
+    return FrictionSimulation(drag, position.pixels, velocity);
   }
 }
 
@@ -113,11 +146,13 @@ class MomentumScrollPhysics extends ScrollPhysics
 
   @override
   MomentumScrollPhysics applyTo(ScrollPhysics? ancestor) {
-    return MomentumScrollPhysics(parent: buildParent(ancestor));
+    return MomentumScrollPhysics(
+        parent: buildParent(ancestor), valueMagnifier: valueMagnifier);
   }
 
   @override
   double carriedMomentum(double existingVelocity) {
+    print("Current param: $valueMagnifier, $existingVelocity");
     return valueMagnifier * existingVelocity;
   }
 

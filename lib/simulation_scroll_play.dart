@@ -12,98 +12,73 @@ class SimulationScrollPlay extends StatefulWidget {
 }
 
 class _SimulationScrollPlayState extends State<SimulationScrollPlay> {
-  late ScrollPhysics _physics = BallisticScrollPhysics();
-  late double _mass = 1;
-  late double _drag = 1;
+  late ScrollPhysics _physics =
+      BallisticScrollPhysics().applyTo(BouncingScrollPhysics());
+  late double _mass = 0.5;
+  late double _drag = 0.2;
   late double _stiffness = 1;
   late double _damping = 1;
+
+  bool _loading = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
         children: [
-          Expanded(
-            child: _Body(
-              physics: _physics,
-            ),
-          ),
+          switch (_loading) {
+            true => Expanded(
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+            _ => Expanded(
+                child: _Body(
+                  physics: _physics,
+                ),
+              ),
+          },
           Column(
             children: [
               Text('Drag: $_drag'),
-              Row(
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  const Text('min: 0'),
-                  Expanded(
-                    child: Slider(
-                      value: _drag,
-                      min: 0,
-                      max: 100,
-                      label: '$_drag',
-                      onChanged: (double value) {
-                        _drag = value;
-                        _rebuildPhysics();
-                        setState(() {});
-                      },
-                    ),
-                  ),
-                  Text('max: 100'),
-                ],
+              SliderWithLabels(
+                min: 0,
+                max: 1,
+                value: _drag,
+                onChanged: (value) {
+                  _drag = value;
+                  _rebuildPhysics();
+                },
               ),
               Text('Stiffness: $_stiffness'),
-              Row(
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  Text('min: 0'),
-                  Slider(
-                    value: _stiffness,
-                    min: 0,
-                    max: 1,
-                    onChanged: (double value) {
-                      _stiffness = value;
-                      _rebuildPhysics();
-                      setState(() {});
-                    },
-                  ),
-                  Text('max: 1'),
-                ],
+              SliderWithLabels(
+                min: 0,
+                max: 1000,
+                value: _stiffness,
+                onChanged: (value) {
+                  _stiffness = value;
+                  _rebuildPhysics();
+                },
               ),
               Text('Mass: $_mass'),
-              Row(
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  Text('min: 0'),
-                  Slider(
-                    value: _mass,
-                    min: 0,
-                    max: 100,
-                    onChanged: (double value) {
-                      _mass = value;
-                      _rebuildPhysics();
-                      setState(() {});
-                    },
-                  ),
-                  Text('max: 100'),
-                ],
+              SliderWithLabels(
+                min: 0,
+                max: 10,
+                value: _mass,
+                onChanged: (value) {
+                  _mass = value;
+                  _rebuildPhysics();
+                },
               ),
               Text('Damping: $_damping'),
-              Row(
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  Text('min: -1'),
-                  Slider(
-                    value: _damping,
-                    min: -1,
-                    max: 1,
-                    onChanged: (double value) {
-                      _damping = value;
-                      _rebuildPhysics();
-                      setState(() {});
-                    },
-                  ),
-                  Text('max: 1'),
-                ],
+              SliderWithLabels(
+                min: 0,
+                max: 3,
+                value: _damping,
+                onChanged: (value) {
+                  _damping = value;
+                  _rebuildPhysics();
+                },
               ),
             ],
           )
@@ -112,13 +87,19 @@ class _SimulationScrollPlayState extends State<SimulationScrollPlay> {
     );
   }
 
-  void _rebuildPhysics() {
+  void _rebuildPhysics() async {
+    _physics = BouncingScrollPhysics();
+    _loading = true;
+    setState(() {});
+    await Future.delayed(Duration(milliseconds: 200));
+    _loading = false;
     _physics = BallisticScrollPhysics(
       damping: _damping,
       mass: _mass,
       drag: _drag,
       stiffness: _stiffness,
-    );
+    ).applyTo(BouncingScrollPhysics());
+    setState(() {});
   }
 }
 
@@ -130,10 +111,42 @@ class _Body extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('DEVVV: ph: ${physics.hashCode}');
     return ListView.builder(
       physics: physics,
       itemBuilder: (context, index) => Text(listData[index].name),
       itemCount: listData.length,
+    );
+  }
+}
+
+class SliderWithLabels extends StatelessWidget {
+  final double min, max, value;
+  final void Function(double) onChanged;
+  const SliderWithLabels(
+      {super.key,
+      required this.min,
+      required this.max,
+      required this.value,
+      required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.max,
+      children: [
+        Text('min: $min'),
+        Expanded(
+            child: Slider(
+          value: value,
+          min: min,
+          max: max,
+          onChanged: (double value) {
+            onChanged(value);
+          },
+        )),
+        Text('max: $max'),
+      ],
     );
   }
 }

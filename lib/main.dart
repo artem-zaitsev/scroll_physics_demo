@@ -33,7 +33,7 @@ class MyApp extends StatelessWidget {
             PointerDeviceKind.mouse,
           },
         ),
-        child: child ?? Container(),
+        child: SafeArea(child: child ?? Container()),
       ),
     );
   }
@@ -46,12 +46,14 @@ class MainPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final tile in phs)
             Card(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
+              clipBehavior: Clip.hardEdge,
               child: InkWell(
                 onTap: () {
                   context.goNamed(tile);
